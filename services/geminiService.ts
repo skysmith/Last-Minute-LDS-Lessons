@@ -68,12 +68,12 @@ export const generateSlides = async (
        - ADULTS: Questions should be doctrinal and reflective.
 
     CRITICAL INSTRUCTIONS FOR IMAGERY ('imageKeyword'):
-    - PRIMARY (Children): The image keyword must describe a "cute, colorful, 2D vector illustration" or "storybook art" related to the specific slide topic. Do not request realistic photos.
-    - YOUTH (Teens): The image keyword must describe "epic digital concept art", "lo-fi aesthetic", or "modern comic book style" related to the slide.
-    - ADULTS: The image keyword should describe "realistic historical oil painting" or "cinematic biblical photography".
+    - PRIMARY (Children): Start with "cute vector illustration". Keep description concise (max 10 words).
+    - YOUTH (Teens): Start with "digital art style". Keep description concise (max 10 words).
+    - ADULTS: Start with "cinematic oil painting". Keep description concise (max 10 words).
     
     Generate 5-8 slides.
-    The 'imageKeyword' will be used by an AI image generator, so be descriptive of the visual style (e.g., "colorful illustration of daniel in lions den" vs just "lions").
+    The 'imageKeyword' will be used by an AI image generator, so keep it short but descriptive of the style.
   `;
 
   try {
@@ -97,7 +97,7 @@ export const generateSlides = async (
               },
               scriptureReference: { type: Type.STRING, description: "Relevant verses for this specific slide" },
               discussionQuestion: { type: Type.STRING, description: "One main 'big idea' question for the class" },
-              imageKeyword: { type: Type.STRING, description: "Descriptive prompt for the background image including art style" },
+              imageKeyword: { type: Type.STRING, description: "Short visual prompt (max 10 words) describing style and subject" },
               speakerNotes: { type: Type.STRING, description: "Tips for the teacher on how to present this slide" },
             },
             required: ['title', 'bullets', 'imageKeyword', 'speakerNotes'],

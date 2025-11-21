@@ -8,6 +8,7 @@ interface SlideDeckProps {
 
 export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [imgError, setImgError] = useState(false);
   const slides = lessonPlan.slides;
   const currentSlide = slides[currentIndex];
 
@@ -35,11 +36,17 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToNext, goToPrev]);
 
+  // Reset image error state when slide changes
+  useEffect(() => {
+    setImgError(false);
+  }, [currentIndex]);
+
   // Image URL construction using Pollinations for generative AI images based on description
   const getImageUrl = (keyword: string) => {
-    // Encoding the keyword allows us to pass full phrases like "colorful illustration of..."
-    // We use nologo=true to keep it clean, and set a reasonable size for performance.
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=1280&height=720&nologo=true&model=flux`;
+    // We removed 'model=flux' to allow the provider to use the fastest available model (usually Turbo or default).
+    // This improves reliability significantly.
+    // We encode the keyword to ensure special characters don't break the URL.
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=1280&height=720&nologo=true`;
   };
 
   return (
@@ -65,12 +72,19 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
         {/* Background Image */}
         <div className="absolute inset-0 z-0 bg-slate-900">
            {/* We use key={currentIndex} to force the image to unmount/remount for the fade effect */}
-           <img 
-             key={currentIndex}
-             src={getImageUrl(currentSlide.imageKeyword)} 
-             alt="Background" 
-             className="w-full h-full object-cover opacity-60 animate-fadeIn"
-           />
+           {!imgError ? (
+             <img 
+               key={currentIndex}
+               src={getImageUrl(currentSlide.imageKeyword)} 
+               alt="Background" 
+               onError={() => setImgError(true)}
+               loading="eager"
+               className="w-full h-full object-cover opacity-60 animate-fadeIn"
+             />
+           ) : (
+             // Fallback gradient if image fails to load
+             <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 opacity-60 animate-fadeIn" />
+           )}
            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/20" />
         </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PptxGenJS from 'pptxgenjs';
 import { Slide, LessonPlan } from '../types';
 
 interface SlideDeckProps {
@@ -9,6 +10,8 @@ interface SlideDeckProps {
 export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imgError, setImgError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const slides = lessonPlan.slides;
   const currentSlide = slides[currentIndex];
 
@@ -26,6 +29,10 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showSources) {
+        if (e.key === 'Escape') setShowSources(false);
+        return;
+      }
       if (e.key === 'ArrowRight' || e.key === 'Space') {
         goToNext();
       } else if (e.key === 'ArrowLeft') {
@@ -34,7 +41,7 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrev]);
+  }, [goToNext, goToPrev, showSources]);
 
   // Reset image error state when slide changes
   useEffect(() => {
@@ -49,6 +56,134 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=1280&height=720&nologo=true`;
   };
 
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      const pres = new PptxGenJS();
+      pres.layout = 'LAYOUT_16x9';
+      pres.title = lessonPlan.topic;
+      pres.subject = `Come Follow Me - ${lessonPlan.audience}`;
+
+      // Loop through slides and add to PPTX
+      for (const s of slides) {
+        const slide = pres.addSlide();
+        
+        // Background Image
+        // PptxGenJS can fetch the image from the URL and embed it.
+        slide.background = { path: getImageUrl(s.imageKeyword) };
+        
+        // Dark Overlay (Simulated with a semi-transparent rectangle)
+        // This ensures white text is readable over the image.
+        slide.addShape(pres.ShapeType.rect, { 
+          x: 0, y: 0, w: '100%', h: '100%', 
+          fill: { color: '000000', transparency: 40 } 
+        });
+
+        // Title
+        slide.addText(s.title, {
+          x: 0.5, y: 0.5, w: '90%', h: 1.5,
+          fontSize: 36,
+          fontFace: 'Arial',
+          color: 'FFFFFF',
+          bold: true,
+          shadow: { type: 'outer', color: '000000', blur: 5, offset: 2, opacity: 0.5 }
+        });
+
+        // Bullets / Questions
+        const bulletItems = s.bullets.map(b => ({
+          text: b,
+          options: {
+            fontSize: 20,
+            color: 'FFFFFF',
+            breakLine: true,
+            bullet: true,
+            paraSpaceBefore: 10
+          }
+        }));
+
+        slide.addText(bulletItems, {
+          x: 0.5, y: 2.0, w: '85%', h: 4.0,
+          fontFace: 'Arial',
+          valign: 'top'
+        });
+
+        // Scripture Reference
+        if (s.scriptureReference) {
+          slide.addText(`📖 ${s.scriptureReference}`, {
+            x: 0.5, y: 6.2, w: '90%', h: 0.6,
+            fontSize: 14,
+            fontFace: 'Arial',
+            color: 'FFD700', // Gold
+            italic: true
+          });
+        }
+
+        // Discussion Question (Sidebar style)
+        if (s.discussionQuestion) {
+          slide.addShape(pres.ShapeType.rect, {
+             x: 9.5, y: 2.0, w: 3.5, h: 4.0,
+             fill: { color: '1E3A8A', transparency: 20 }, // Blue-900 ish
+             line: { color: '60A5FA', width: 1 } // Blue-400
+          });
+          
+          slide.addText("KEY QUESTION", {
+             x: 9.7, y: 2.2, w: 3.1, h: 0.3,
+             fontSize: 10, color: 'BFDBFE', bold: true // Blue-200
+          });
+
+          slide.addText(s.discussionQuestion, {
+            x: 9.7, y: 2.6, w: 3.1, h: 3.0,
+            fontSize: 16,
+            color: 'FFFFFF',
+            bold: true,
+            valign: 'top'
+          });
+        }
+
+        // Speaker Notes
+        slide.addNotes(s.speakerNotes);
+      }
+
+      // Add Sources Slide if sources exist (Required for Search Grounding)
+      if (lessonPlan.sources && lessonPlan.sources.length > 0) {
+        const slide = pres.addSlide();
+        slide.background = { color: '111827' }; // Slate-900
+        
+        slide.addText("Sources", {
+          x: 0.5, y: 0.5, w: '90%', h: 1.0,
+          fontSize: 32,
+          fontFace: 'Arial',
+          color: 'FFFFFF',
+          bold: true
+        });
+
+        const sourceItems = lessonPlan.sources.map(s => ({
+          text: `${s.title}: ${s.uri}`,
+          options: {
+            fontSize: 14,
+            color: '60A5FA',
+            breakLine: true,
+            hyperlink: { url: s.uri },
+            paraSpaceBefore: 10
+          }
+        }));
+
+        slide.addText(sourceItems, {
+          x: 0.5, y: 1.5, w: '90%', h: 5.0,
+          fontFace: 'Arial',
+          valign: 'top'
+        });
+      }
+
+      await pres.writeFile({ fileName: `Lesson - ${lessonPlan.topic}.pptx` });
+    } catch (error) {
+      console.error("Export failed", error);
+      alert("Failed to generate PowerPoint. Please check your internet connection (needed for images).");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black text-white z-50 flex flex-col">
       {/* Header / Controls */}
@@ -58,6 +193,33 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
           <p className="text-xs opacity-60">{lessonPlan.audience}</p>
         </div>
         <div className="flex gap-3">
+            {lessonPlan.sources && lessonPlan.sources.length > 0 && (
+              <button
+                onClick={() => setShowSources(true)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm backdrop-blur-sm transition flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                </svg>
+                Sources
+              </button>
+            )}
+            <button 
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-sm font-bold shadow-md transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+            >
+              {isDownloading ? (
+                <span className="animate-pulse">Saving...</span>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden sm:inline">Download PPTX</span>
+                </>
+              )}
+            </button>
              <button 
               onClick={onReset}
               className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm backdrop-blur-sm transition"
@@ -66,6 +228,43 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ lessonPlan, onReset }) => 
             </button>
         </div>
       </div>
+
+      {/* Sources Modal (Required by Gemini API Guidelines for Search Grounding) */}
+      {showSources && (
+        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-8 animate-fadeIn">
+          <div className="bg-slate-900 max-w-3xl w-full p-8 rounded-2xl border border-slate-700 shadow-2xl relative max-h-[80vh] overflow-y-auto">
+            <button 
+              onClick={() => setShowSources(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
+              <span className="text-blue-400">🔗</span> Sources & Grounding
+            </h2>
+            <p className="text-slate-400 mb-6">
+              This lesson plan was generated using information from the following sources:
+            </p>
+            <ul className="space-y-4">
+              {lessonPlan.sources?.map((source, idx) => (
+                <li key={idx} className="flex flex-col p-4 bg-slate-800 rounded-lg hover:bg-slate-750 transition">
+                  <a 
+                    href={source.uri} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 hover:underline font-medium text-lg truncate"
+                  >
+                    {source.title}
+                  </a>
+                  <span className="text-slate-500 text-sm truncate mt-1">{source.uri}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Slide Content */}
       <div className="flex-1 relative overflow-hidden flex items-center justify-center">

@@ -1,14 +1,21 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { Audience, Slide } from '../types';
 
+const getGenAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please add 'API_KEY' to your Vercel Environment Variables and redeploy your application.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 /**
  * Step 1: Use Google Search Grounding to find the correct lesson for the date.
  * We cannot use JSON schema here because of the 'googleSearch' tool restriction.
  */
 export const identifyLesson = async (dateStr: string): Promise<{ title: string; context: string; sources: Array<{title: string, uri: string}> }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   try {
+    const ai = getGenAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Identify the LDS "Come, Follow Me" lesson topic and assigned scripture readings for the week including Sunday, ${dateStr}. 
@@ -30,9 +37,13 @@ export const identifyLesson = async (dateStr: string): Promise<{ title: string; 
       context: text,
       sources,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error identifying lesson:", error);
-    throw new Error("Failed to identify the lesson schedule.");
+    // Pass through our specific configuration errors
+    if (error.message.includes("API Key")) {
+      throw error;
+    }
+    throw new Error("Failed to identify the lesson schedule. Please try again.");
   }
 };
 
@@ -43,8 +54,6 @@ export const generateSlides = async (
   lessonContext: string,
   audience: Audience
 ): Promise<Slide[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   const systemInstruction = `
     You are an expert Latter-day Saint teacher. 
     Create a presentation lesson plan based on the provided "Come, Follow Me" lesson details.
@@ -62,6 +71,7 @@ export const generateSlides = async (
   `;
 
   try {
+    const ai = getGenAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Here is the lesson context found via search: ${lessonContext}. Generate the slides now.`,
@@ -88,8 +98,11 @@ export const generateSlides = async (
 
     const jsonStr = response.text || '[]';
     return JSON.parse(jsonStr) as Slide[];
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating slides:", error);
+    if (error.message.includes("API Key")) {
+      throw error;
+    }
     throw new Error("Failed to generate slide content.");
   }
 };

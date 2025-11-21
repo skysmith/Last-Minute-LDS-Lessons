@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Audience } from '../types';
 import { AUDIENCE_OPTIONS, getUpcomingSundays, formatDate } from '../constants';
 
@@ -8,7 +8,9 @@ interface SetupFormProps {
 }
 
 export const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isGenerating }) => {
-  const sundays = getUpcomingSundays(4);
+  // Memoize sundays so they don't regenerate with different milliseconds on every render
+  const sundays = useMemo(() => getUpcomingSundays(4), []);
+  
   const [selectedDate, setSelectedDate] = useState<Date>(sundays[0]);
   const [selectedAudience, setSelectedAudience] = useState<Audience>(Audience.GOSPEL_DOCTRINE);
 

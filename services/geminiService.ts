@@ -60,14 +60,20 @@ export const generateSlides = async (
     
     Audience Profile: ${audience}
     
-    Guidelines:
-    - PRIMARY: Use very simple language, focus on stories, key phrases, and songs.
-    - YOUTH: Focus on application, standards, and challenges teens face.
-    - GOSPEL DOCTRINE: Focus on doctrine, history, and cross-references.
-    - GOSPEL ESSENTIALS: Focus on basic commandments and the restoration.
+    CRITICAL INSTRUCTIONS FOR CONTENT:
+    1. **QUESTIONS ONLY**: Do NOT use standard bullet point statements. Every item in the 'bullets' array must be an engaging, open-ended QUESTION designed to spark discussion among the class members.
+    2. **Tone**:
+       - PRIMARY: Questions should be simple (e.g., "How do you think Noah felt?").
+       - YOUTH: Questions should be about application and feelings (e.g., "When have you stood alone for what is right?").
+       - ADULTS: Questions should be doctrinal and reflective.
 
+    CRITICAL INSTRUCTIONS FOR IMAGERY ('imageKeyword'):
+    - PRIMARY (Children): The image keyword must describe a "cute, colorful, 2D vector illustration" or "storybook art" related to the specific slide topic. Do not request realistic photos.
+    - YOUTH (Teens): The image keyword must describe "epic digital concept art", "lo-fi aesthetic", or "modern comic book style" related to the slide.
+    - ADULTS: The image keyword should describe "realistic historical oil painting" or "cinematic biblical photography".
+    
     Generate 5-8 slides.
-    The 'imageKeyword' should be a single specific concrete noun or simple phrase describing a visual for the slide (e.g., "temple", "jesus sheep", "ancient scroll", "happy family") that can be used to search for stock photos.
+    The 'imageKeyword' will be used by an AI image generator, so be descriptive of the visual style (e.g., "colorful illustration of daniel in lions den" vs just "lions").
   `;
 
   try {
@@ -84,10 +90,14 @@ export const generateSlides = async (
             type: Type.OBJECT,
             properties: {
               title: { type: Type.STRING },
-              bullets: { type: Type.ARRAY, items: { type: Type.STRING } },
+              bullets: { 
+                type: Type.ARRAY, 
+                items: { type: Type.STRING },
+                description: "A list of discussion questions. Do not use statements." 
+              },
               scriptureReference: { type: Type.STRING, description: "Relevant verses for this specific slide" },
-              discussionQuestion: { type: Type.STRING, description: "A thought-provoking question for the class" },
-              imageKeyword: { type: Type.STRING, description: "Search term for a background image" },
+              discussionQuestion: { type: Type.STRING, description: "One main 'big idea' question for the class" },
+              imageKeyword: { type: Type.STRING, description: "Descriptive prompt for the background image including art style" },
               speakerNotes: { type: Type.STRING, description: "Tips for the teacher on how to present this slide" },
             },
             required: ['title', 'bullets', 'imageKeyword', 'speakerNotes'],

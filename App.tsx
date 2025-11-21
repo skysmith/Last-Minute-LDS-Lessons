@@ -78,6 +78,10 @@ const App: React.FC = () => {
                  Combine the power of AI with the spirit of the Come, Follow Me curriculum. 
                  Automatically generate beautiful slide decks for your Primary, Youth, or Adult classes.
                </p>
+               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 max-w-lg mx-auto mb-8">
+                 <strong>🎨 Note regarding images:</strong> Background artwork is AI-generated in real-time. 
+                 Please allow a few seconds for images to load when you open the presentation.
+               </div>
              </div>
              <SetupForm onGenerate={handleGenerate} isGenerating={false} />
           </div>

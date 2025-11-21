@@ -28,24 +28,26 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isGenerating }
         {/* Date Selection */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">Select Sunday</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {sundays.map((date) => {
-              const isSelected = date.getTime() === selectedDate.getTime();
-              return (
-                <button
-                  type="button"
-                  key={date.toISOString()}
-                  onClick={() => setSelectedDate(date)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-sm'
-                      : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="block font-bold text-lg">{formatDate(date)}</span>
-                </button>
-              );
-            })}
+          <div className="relative">
+            <select
+              value={selectedDate.toISOString()}
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setSelectedDate(date);
+              }}
+              className="w-full p-4 pr-10 rounded-xl border-2 border-slate-200 bg-white text-lg font-bold text-slate-800 appearance-none focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer hover:border-blue-300"
+            >
+              {sundays.map((date) => (
+                <option key={date.toISOString()} value={date.toISOString()}>
+                  {formatDate(date)}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4 4 4-4" />
+              </svg>
+            </div>
           </div>
         </div>
 
